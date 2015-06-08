@@ -12,8 +12,8 @@ class Worker::Impl {
 public:
     Impl(uv_loop_t*) {}
 
-    void doWork(std::shared_ptr<WorkTask>& task) {
-        task->runTask();
+    void doWork(Fn work) {
+        work();
     }
 };
 
@@ -26,15 +26,8 @@ Worker::Worker(std::size_t count) {
 Worker::~Worker() = default;
 
 std::unique_ptr<WorkRequest> Worker::send(Fn work, Fn after) {
-    auto task = std::make_shared<WorkTask>(work, after);
-    auto request = std::make_unique<WorkRequest>(task);
-
-    threads[current]->invokeWithResult(&Worker::Impl::doWork, [task] {
-        task->runAfter();
-    }, task);
-
     current = (current + 1) % threads.size();
-    return request;
+    return threads[current]->invokeWithResult(&Worker::Impl::doWork, after, work);
 }
 
 } // end namespace mbgl
