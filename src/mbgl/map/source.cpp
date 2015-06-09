@@ -224,7 +224,7 @@ TileData::State Source::hasTile(const TileID& id) {
     return TileData::State::invalid;
 }
 
-bool Source::handlePartialTile(const TileID& id, Worker& worker) {
+bool Source::handlePartialTile(const TileID& id, Worker&) {
     const TileID normalized_id = id.normalized();
 
     auto it = tile_data.find(normalized_id);
@@ -247,7 +247,7 @@ bool Source::handlePartialTile(const TileID& id, Worker& worker) {
         }
     };
 
-    return data->reparse(worker, callback);
+    return data->reparse(callback);
 }
 
 TileData::State Source::addTile(MapData& data,
@@ -292,16 +292,15 @@ TileData::State Source::addTile(MapData& data,
             new_tile.data =
                 std::make_shared<VectorTileData>(normalized_id, style, info,
                                                  transformState.getAngle(), data.getCollisionDebug());
-            new_tile.data->request(style.workers, transformState.getPixelRatio(), callback);
+            new_tile.data->request(transformState.getPixelRatio(), callback);
         } else if (info.type == SourceType::Raster) {
-            new_tile.data = std::make_shared<RasterTileData>(normalized_id, texturePool, info);
-            new_tile.data->request(
-                style.workers, transformState.getPixelRatio(), callback);
+            new_tile.data = std::make_shared<RasterTileData>(normalized_id, texturePool, info, style.workers);
+            new_tile.data->request(transformState.getPixelRatio(), callback);
         } else if (info.type == SourceType::Annotations) {
             new_tile.data = std::make_shared<LiveTileData>(normalized_id, data.annotationManager,
                                                            style, info,
                                                            transformState.getAngle(), data.getCollisionDebug());
-            new_tile.data->reparse(style.workers, callback);
+            new_tile.data->reparse(callback);
         } else {
             throw std::runtime_error("source type not implemented");
         }
@@ -556,7 +555,6 @@ void Source::tileLoadingCompleteCallback(const TileID& normalized_id, const Tran
 
     emitTileLoaded(true);
     data->redoPlacement(transformState.getAngle(), collisionDebug);
-
 }
 
 void Source::emitSourceLoaded() {
