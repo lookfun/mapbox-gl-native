@@ -18,7 +18,7 @@ VectorTileData::VectorTileData(const TileID& id_,
                                float angle,
                                bool collisionDebug)
     : TileData(id_),
-      workerData(id_,
+      tileWorker(id_,
                  style_,
                  source_.max_zoom,
                  state,
@@ -65,7 +65,7 @@ bool VectorTileData::reparse(Worker&, std::function<void()> callback) {
 
     parsing = true;
 
-    workRequest = worker.parseVectorTile(workerData, data, [this, callback] (TileParseResult result) {
+    workRequest = worker.parseVectorTile(tileWorker, data, [this, callback] (TileParseResult result) {
         parsing = false;
 
         if (state == State::obsolete) {
@@ -90,11 +90,11 @@ Bucket* VectorTileData::getBucket(const StyleLayer& layer) {
         return nullptr;
     }
 
-    return workerData.getBucket(layer);
+    return tileWorker.getBucket(layer);
 }
 
 size_t VectorTileData::countBuckets() const {
-    return workerData.countBuckets();
+    return tileWorker.countBuckets();
 }
 
 void VectorTileData::redoPlacement(float angle, bool collisionDebug) {
@@ -111,8 +111,8 @@ void VectorTileData::redoPlacement(float angle, bool collisionDebug) {
     currentAngle = angle;
     currentCollisionDebug = collisionDebug;
 
-    workRequest = worker.redoPlacement(workerData, angle, collisionDebug, [this] {
-        for (const auto& layer : workerData.style.layers) {
+    workRequest = worker.redoPlacement(tileWorker, angle, collisionDebug, [this] {
+        for (const auto& layer : tileWorker.style.layers) {
             auto bucket = getBucket(*layer);
             if (bucket) {
                 bucket->swapRenderData();
