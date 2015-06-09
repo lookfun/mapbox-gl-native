@@ -14,7 +14,6 @@ RasterTileData::RasterTileData(const TileID& id_,
                                const SourceInfo &source_)
     : TileData(id_),
       source(source_),
-      env(Environment::Get()),
       bucket(texturePool, layout) {
 }
 
@@ -28,7 +27,7 @@ void RasterTileData::request(Worker& worker,
     std::string url = source.tileURL(id, pixelRatio);
     state = State::loading;
 
-    req = env.request({ Resource::Kind::Tile, url }, [url, callback, &worker, this](const Response &res) {
+    req = Environment::Get().request({ Resource::Kind::Tile, url }, [url, callback, &worker, this](const Response &res) {
         req = nullptr;
 
         if (res.status != Response::Successful) {
@@ -41,19 +40,20 @@ void RasterTileData::request(Worker& worker,
         }
 
         state = State::loaded;
-        data = res.data;
 
-        workRequest = worker.send([this] {
-            if (getState() != State::loaded) {
+        workRequest = worker.parseRasterTile(bucket, res.data, [this, callback] (bool result) {
+            if (state != State::loaded) {
                 return;
             }
 
-            if (bucket.setImage(data)) {
+            if (result) {
                 state = State::parsed;
             } else {
                 state = State::invalid;
             }
-        }, callback);
+
+            callback();
+        });
     });
 }
 
@@ -71,7 +71,7 @@ void RasterTileData::cancel() {
         state = State::obsolete;
     }
     if (req) {
-        env.cancelRequest(req);
+        Environment::Get().cancelRequest(req);
         req = nullptr;
     }
     workRequest.reset();
