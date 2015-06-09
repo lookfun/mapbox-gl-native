@@ -57,7 +57,6 @@
         'miscellaneous/tile.cpp',
         'miscellaneous/transform.cpp',
         'miscellaneous/variant.cpp',
-        'miscellaneous/worker.cpp',
 
         'storage/storage.hpp',
         'storage/storage.cpp',
